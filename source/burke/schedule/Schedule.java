@@ -83,13 +83,16 @@ System.out.println(this);
 	}
 	
 	private void copyShiftsFromMasterSchedule()	{
-System.out.println("*****************Copy shifts...");
 		Shift[] allMasterShifts = Schedule.MasterSchedule.getAllShifts();
 		for (Shift masterShift : allMasterShifts)	{
-			if (masterShift.getPerson() != null  && masterShift.getPerson().getTelestrokePreference().equals(TelestrokePreference.WITH))
-					getShift(masterShift.getDate(), masterShift.getAMPM()).assignPerson(PersonDirectory.getPerson(masterShift.getPerson().getFirstName(), masterShift.getPerson().getLastName()));
+			if (masterShift.getPerson() != null  && masterShift.getPerson().getTelestrokePreference().equals(TelestrokePreference.WITH))	{
+				Shift newShift = getShift(masterShift.getDate(), masterShift.getAMPM());
+				Person newPerson = PersonDirectory.getPerson(masterShift.getPerson().getFirstName(), masterShift.getPerson().getLastName());
+				if (newPerson.isAvailableForShift(newShift))
+					newShift.assignPerson(newPerson);
+			}
 		}
-		
+
 	}
 	
 	private void applyStaffedFellowPreferences()	{		
@@ -97,7 +100,6 @@ System.out.println("*****************Copy shifts...");
 
 		for (Person fellow : fellows)	{		
 			//first give them all their preferred shifts if they didn't hit their cap doing mandatories
-	System.out.println("Starting preferred for staffed fellows");
 			for (int i = 0; i <  allShifts.length; i++)	{
 				if (fellow.isPreferredForShift(allShifts[i]) )
 					allShifts[i].assignStaffedFellow(fellow);
