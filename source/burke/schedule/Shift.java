@@ -71,9 +71,9 @@ public class Shift implements Comparable<Shift>	{
 	
 	public void assignPerson(Person person)	{
 		if ((person.isFellow() & noStaffedFellowAssigned() & !invincibleAssigned()) | (!person.isFellow() & !invincibleAssigned()))	{	//don't let an unstaffed fellow staff a staffed fellow
-System.out.println("assigning person: " + person.getLastName() + " to shift: " + this);
+//System.out.println("assigning person: " + person.getLastName() + " to shift: " + this);
 			if (getPerson() != null)	{
-System.out.println("Unassigning person: " + getPerson().getLastName() + " from shift: " + toString());
+//System.out.println("Unassigning person: " + getPerson().getLastName() + " from shift: " + toString());
 				getPerson().unassignShift(this);
 			}
 			this.assigned = person;

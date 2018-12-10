@@ -1,1 +1,1 @@
-java -cp scheduler.jar:ical4j-1.0.6.jar:backport-util-concurrent-3.1.jar  burke.schedule.ConvertToIcal august2018.csv 1
+java -cp scheduler.jar:ical4j-1.0.6.jar:backport-util-concurrent-3.1.jar  burke.schedule.ConvertToIcal december2018.csv 1

@@ -42,7 +42,8 @@ public class ConvertToIcal	{
 		List<Shift> allShifts = new ArrayList<Shift>();
 		while (line != null)	{
 			String[] args = line.split(",");
-			int date = new Integer(args[0].split("-")[0].trim());
+			String numeralString = args[0].split("-")[0].trim();
+			int date =  Integer.decode(numeralString);
 			String ampmRaw = args[0].split("-")[1].trim();
 			AMPM ampm = ampmRaw.equals("AM") ? AMPM.AM : AMPM.PM;
 			String name = args[1];
