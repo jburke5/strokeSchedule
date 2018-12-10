@@ -13,11 +13,20 @@ public class Schedule extends GregorianCalendar	{
 	private Shift[] allShifts;
 	
 	public static Schedule MasterSchedule = null;
+	
+	private boolean master;
+	
 
-	//logically, this seems like it should be a singleton...there is only one schedule...that's what the app makes — clean this up...
 	public Schedule (int year, int month, boolean master)	{
-		this(year, month);
-		MasterSchedule = this;
+		super(year, month, 1);
+		this.YEAR = year;
+		this.MONTH = month;
+		initShifts();
+		set(DAY_OF_MONTH, 1);	//reset to one after initializing shifts
+
+		if (master)
+			MasterSchedule = this;
+		this.master = master;
 	}
 	
 	public static Schedule getMasterSchedule()	{
@@ -25,11 +34,7 @@ public class Schedule extends GregorianCalendar	{
 	}
 	
 	public Schedule(int year, int month)	{
-		super(year, month, 1);
-		this.YEAR = year;
-		this.MONTH = month;
-		initShifts();
-		set(DAY_OF_MONTH, 1);	//reset to one after initializing shifts
+		this(year, month, false);
 	}
 	
 	public int countUnfilledShifts()	{
@@ -57,33 +62,77 @@ public class Schedule extends GregorianCalendar	{
 	}
 	
 	public void applyShifts()	{
+		if (!master)
+			copyShiftsFromMasterSchedule();
+		
+		
 		if (PersonDirectory.getStaffedFellows().size() > 0)	{
 			applyStaffedFellowPreferences();		//give the staffed fellow their preference shifts
 		}
-//System.out.println("$$$$$$$$$		Print Schedule");
-//System.out.println(this);
+System.out.println("$$$$$$$$$		Print Schedule");
+System.out.println(this);
 		
-		applyInvincibleShifts();		//first take the invincibles
+		applyInvincibleShifts();		//first take the invincibles	
 		applyRemainingShifts();			//then fill in the schedule for everybody else
-		
+
 		if (PersonDirectory.hasUnstaffedFellows() )	{
 			applyUnstaffedFellowGaps();				//then have the unstaffed fellow fill in any gaps
 			applyUnstaffedFellowPreferences();		//give the unstaffed fellow their preference shifts
 		}
-		fillUpMinimumShifts();		//for non-invincibles...try to get them up to 2 shifts per month — mainly this will mean taking from fellows...
-//System.out.println("about to equalize shifts");
-		equalizeShifts();		
+		Arrays.sort(allShifts);
 	}
 	
-	private void applyStaffedFellowPreferences()	{		//this is easy...just give them all of their availabl.es...
+	private void copyShiftsFromMasterSchedule()	{
+		Shift[] allMasterShifts = Schedule.MasterSchedule.getAllShifts();
+		for (Shift masterShift : allMasterShifts)	{
+			if (masterShift.getPerson() != null  && masterShift.getPerson().getTelestrokePreference().equals(TelestrokePreference.WITH))	{
+				Shift newShift = getShift(masterShift.getDate(), masterShift.getAMPM());
+				Person newPerson = PersonDirectory.getPerson(masterShift.getPerson().getFirstName(), masterShift.getPerson().getLastName());
+				if (newPerson.isAvailableForShift(newShift))
+					newShift.assignPerson(newPerson);
+			}
+		}
+
+	}
+	
+	private void applyStaffedFellowPreferences()	{		
 		ArrayList<Person> fellows = PersonDirectory.getStaffedFellows();
-		for (int i = 0; i < allShifts.length; i++)	{
-			int availablePeople = countAvailablePeople(fellows, allShifts[i]);
-			if (availablePeople > 1)	{		//randomly assign
-				int index = new Random().nextInt(fellows.size());	
-				allShifts[i].assignStaffedFellow(fellows.get(index));	
-			} else if(availablePeople == 1)	
-				allShifts[i].assignStaffedFellow(getFirstAvailablePerson(fellows, allShifts[i]));
+
+		for (Person fellow : fellows)	{		
+			//first give them all their preferred shifts if they didn't hit their cap doing mandatories
+			for (int i = 0; i <  allShifts.length; i++)	{
+				if (fellow.isPreferredForShift(allShifts[i]) )
+					allShifts[i].assignStaffedFellow(fellow);
+			}
+		}
+
+		ArrayList<Shift> shiftsToAssign = new ArrayList<Shift>(Arrays.asList(allShifts));
+		Collections.shuffle(shiftsToAssign);
+		
+		
+		//redtag: need to check that fellows are available before signing shifts...left off here.
+		
+		for (Shift shift : shiftsToAssign)	{
+			if (shift.hasStaffedFellowAssigned())
+				continue;
+			int weekInYear = Schedule.getMasterSchedule().getWeekYear() + shift.getWeekOfMonth();			
+			int fellowForWeek = weekInYear % fellows.size();
+			
+			if (shift.isWeekdayDayShift())	{		//for weekday day shifts...assign one fellow to all shifts if available...if not try other fellow
+				if (fellows.get(fellowForWeek).isAvailableForShift(shift))	{
+					boolean fellowAssigned = shift.assignStaffedFellow(fellows.get(fellowForWeek));
+					if (!fellowAssigned)
+						shift.assignStaffedFellow(getFirstAvailablePerson(fellows, shift));
+				}
+			} else	{		//for all other shifts...assign fellows randomly based on availability.
+				int availablePeople = countAvailablePeople(fellows, shift);
+				if (availablePeople > 1)	{		//randomly assign
+					int index = new Random().nextInt(fellows.size());	
+					boolean fellowAssigned = shift.assignStaffedFellow(fellows.get(index));	
+					
+				} else if(availablePeople == 1)	
+					shift.assignStaffedFellow(getFirstAvailablePerson(fellows, shift));
+			}
 		}
 	}
 	
@@ -96,9 +145,10 @@ public class Schedule extends GregorianCalendar	{
 	
 	private int countAvailablePeople(List<Person> people, Shift shift)	{
 		int availableCount = 0;
-		for (Person person : people)	
+		for (Person person : people)	{
 			if (person.isAvailableForShift(shift))
 				availableCount++;
+		}
 		return availableCount;
 	}
 	
@@ -106,12 +156,12 @@ public class Schedule extends GregorianCalendar	{
 		List<Person> fellows = PersonDirectory.getUnstaffedFellows();
 		for (Person fellow : fellows)	{		
 			//first give them all their preferred shifts if they didn't hit their cap doing mandatories
-	//System.out.println("Starting preferred");
+	System.out.println("Starting preferred");
 			for (int i = 0; i <  allShifts.length; i++)	{
 				if (fellow.isPreferredForShift(allShifts[i]) )
 					allShifts[i].assignPersonIfNotCapped(fellow);
 			}
-	//System.out.println("Ending preferred");
+	System.out.println("Ending preferred");
 		
 			//then give them available shifts until they hit their caps...which will assign weekday ams
 			for (int i = 0; i <  allShifts.length; i++)	{
@@ -121,70 +171,14 @@ public class Schedule extends GregorianCalendar	{
 		}	
 		
 	}
-	
-	private void fillShiftsToMinimum(Person slacker)	{
-//System.out.println("filling minimum shifts for : " + slacker.getLastName());
-		ArrayList<Shift> shifts = new ArrayList<Shift>(slacker.getAllAvailableShifts());
-		Collections.sort(shifts, new ShiftWeightComparator());
-		for (Shift shift : shifts)
-			if (slacker.getShiftCount() < SHIFT_COUNT_FLOOR)
-				getShift(shift.getDate(),  shift.getAMPM()).assignPerson(slacker);		//need to get the shift from the schedule not from the person...kind of ugly...
-//System.out.println("done filling minimum shifts for : " + slacker.getLastName());
-	}
+
 	
 	private class ShiftWeightComparator implements Comparator<Shift>	{
 		public int compare(Shift a, Shift b) {
 			return a.getWeight() < b.getWeight() ? 1 : a.getWeight() == b.getWeight() ? 0 : -1;
     	}
 	}
-	
-	private void fillUpMinimumShifts()	{
-//System.out.println("Filling shifts to minimum...");
-		ArrayList<Person> people = 	PersonDirectory.getNonFellows();
-		for (Person person : people)	
-			if (person.getShiftCount() <= SHIFT_COUNT_FLOOR)
-				fillShiftsToMinimum(person);		
-//System.out.println("Done filling shifts to minimum...");
-	}
-	
-	//remember to take the fellow out of the equalization lists...
-	private void equalizeShifts()	{
-		//then apply an equalization algorithm
-		ArrayList<Person> people = 	PersonDirectory.getNonFellows();
-		double currentSD = meanSDWeights();
-		double lastSD = 100;
-//System.out.println("currentSD: " + currentSD + " lastSD: " + lastSD);
-		while (currentSD < lastSD)	{
-			Collections.sort(people);
-			Swap swap = lookForASwap(people);
-			if (swap != null)	{
-				swap.executeSwap();
-			}
-			if (meanSDWeights() > currentSD)
-				swap.reverseSwap();
-			
-			lastSD = currentSD;
-			currentSD = meanSDWeights();
-//System.out.println("currentSD: " + currentSD + " lastSD: " + lastSD);
-		}
 
-		//then apply an equalization algorithm including possible shifts..
-//System.out.println("**********Now considering possibles...");
-//System.out.println("currentSD: " + currentSD + " lastSD: " + lastSD);
-		lastSD = 100; 	//reset this so that we loop at least once...
-		while (currentSD < lastSD * .9)	{		//only do a possible if it makes it much more fair...
-			Collections.sort(people);
-			Swap swap = lookForASwap(people, true);
-			if (swap != null)	
-				swap.executeSwap();
-	
-			if (meanSDWeights() > currentSD)
-				swap.reverseSwap();
-			lastSD = currentSD;
-			currentSD = meanSDWeights();
-//System.out.println("currentSD: " + currentSD + " lastSD: " + lastSD);
-		}	
-	}
 		
 	private void applyUnstaffedFellowGaps()	{
 		List<Person> fellows = PersonDirectory.getUnstaffedFellows();
@@ -198,20 +192,33 @@ public class Schedule extends GregorianCalendar	{
 	}
 	
 	private void applyRemainingShifts()	{
-		//first fill in the availables
-		for (int i = 0; i <  allShifts.length; i++)	{
+		//sort the shifts by the amount of availability...fill shifts from teh least available to the most available
+		Arrays.sort(allShifts, new ShiftAvailabilityComparator());
+		for (int i = 0 ; i < allShifts.length; i++)	
 			if (allShifts[i].isUnfilled())
 				fillShift(allShifts[i]);
-		}
 		
 		//then assign possibles...
-		for (int i = 0; i <  allShifts.length; i++)	{
+		for (int i = 0; i <  allShifts.length; i++)	
 			if (allShifts[i].isUnfilled())
 				fillShift(allShifts[i], true);
-		}	
+
+		//so priority for receiving shift = distance from goal for month + goal/availability mismatch
+		//award shifts to people that are a high distance from their goal OR who hav a high goal availability mismatch
+		//distance from goal = goal - proportion of current shifts covered for the month
+		//goal/availability mismatch = goal - prportion of shifts that we hvaent' gotten to yet that your'e available for.
 		
-		//System.out.println("*******		Before Equalization");
-		//PersonDirectory.printWeights();		
+		
+		System.out.println("*******		Before Equalization");
+		PersonDirectory.printWeights();		
+	}
+	
+	private class ShiftAvailabilityComparator implements Comparator<Shift>	{
+		public int compare(Shift a, Shift b) {
+			int availableA = countAvailablePeople( PersonDirectory.getNonFellows(), a);
+			int availableB = countAvailablePeople(PersonDirectory.getNonFellows(), b);
+			return availableA < availableB ? -1 : availableA == availableB ? 0 : 1;
+    	}
 	}
 	
 	private Swap lookForASwap(ArrayList<Person> people)	{
@@ -277,12 +284,16 @@ public class Schedule extends GregorianCalendar	{
 	}
 	
 	private void fillShift(Shift shift, boolean possibleOK)	{
-//System.out.println("##########		trying to fill shift: " + shift);
+System.out.println("##########		trying to fill shift: " + shift);
+
+//for (Person person : PersonDirectory.getNonInvinciblePeople())
+	//System.out.println(person.getLastName() + " target: " + person.getTarget() + " priority: " + person.getPriority(allShifts) + " far behind: " + (person.getTarget() - person.getTotalAssignedWeight()  / person.totalAssignedWeightSoFar(allShifts)) + " gap: " + (person.getTarget() -  person.getRemainaingAvailableWeight(allShifts)/person.totalUnassignedWeightSoFar(allShifts)));
+		
 		ArrayList<Person> people = PersonDirectory.getNonInvinciblePeople();
-		Collections.sort(people);	//put the people with the lowest weight first...					
+		Collections.sort(people, new PersonPriorityComparator());	//put the people with the lowest weight first...					
 		
 		for (Person person : people)	{
-//System.out.println(person.getLastName() + ": " + person.getAverageWeight());
+//System.out.println(person.getLastName() + ": " + person.getPriority(allShifts));
 			if (possibleOK)	{
 				if (person.isPossibleForShift(shift) || person.isAvailableForShift(shift))	{
 					shift.assignPerson(person);	
@@ -295,7 +306,13 @@ public class Schedule extends GregorianCalendar	{
 				}
 			}
 		}
-		
+	}
+
+	private class PersonPriorityComparator implements Comparator<Person>	{
+		//notSureTag: may need to reverse the sort order on this...i think this will get us high priority to low prioity
+		public int compare(Person a, Person b) {	
+			return a.getPriority(allShifts) < b.getPriority(allShifts) ? 1 : a.getPriority(allShifts) == b.getPriority(allShifts) ? 0 : -1;
+    	}
 	}
 	
 	private void applyInvincibleShifts()	{
@@ -313,6 +330,9 @@ public class Schedule extends GregorianCalendar	{
 		return getShift(shift.getDate(), shift.getAMPM());
 	}
 
+	protected Shift[] getAllShifts()	{
+		return this.allShifts;
+	}
 	
 	protected Shift getShift(int date, AMPM ampm)	{
 		for(int i = 0; i < allShifts.length; i++)	
@@ -331,7 +351,11 @@ public class Schedule extends GregorianCalendar	{
 	}
 	
 	public void printCSV(String path) throws Exception	{
-		String finalPath = path + File.separator + "finalSchedule.csv";
+		printCSV(path, "");
+	}
+
+	public void printCSV(String path, String suffix) throws Exception	{
+		String finalPath = path + File.separator + "finalSchedule" + suffix + ".csv";
 		FileWriter output = new FileWriter(finalPath);
 		for (int i = 0; i < allShifts.length; i++)	{
 			output.write(allShifts[i].getDate() + " - " + allShifts[i].getAMPM().toString());
