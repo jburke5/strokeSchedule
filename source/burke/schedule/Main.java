@@ -23,7 +23,7 @@ public class Main	{
 		if (duplicates > 0)
 			throw new RuntimeException("Duplciate Shifts exist — Fix this!!!");
 
-		int totalPersonShiftCount = PersonDirectory.printWeights();
+		int totalPersonShiftCount = PersonDirectory.printWeights(schedule);
 		if (totalPersonShiftCount != schedule.totalShiftCount())
 			System.out.println("Unstaffed shifts: Shift count assigned to people (" +totalPersonShiftCount + ") toal different than total shift count (" + schedule.totalShiftCount() + ")");
 		schedule.printCSV(shiftDirectory);
@@ -38,7 +38,7 @@ public class Main	{
 
 
 
-		int totalPersonShiftCountTS = PersonDirectory.printWeights();
+		int totalPersonShiftCountTS = PersonDirectory.printWeights(telestrokeSchedule);
 		if (totalPersonShiftCountTS != schedule.totalShiftCount())
 			System.out.println("Telestroke Unstaffed shifts: Shift count assigned to people (" +totalPersonShiftCount + ") toal different than total shift count (" + schedule.totalShiftCount() + ")");
 		

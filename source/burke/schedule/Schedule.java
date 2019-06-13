@@ -222,7 +222,6 @@ System.out.println("**Swap: " + swap.toString());
 	
 	//apply a group of shifts across a group of people...
 	private void assignGroupOfShifts(ArrayList<Shift> shifts, ArrayList<Person> peopleForComparison)	{
-System.out.println("peopelForComparison: " + peopleForComparison.toString());
 		//so priority for receiving shift = distance from goal for month + goal/availability mismatch
 		//award shifts to people that are a high distance from their goal OR who hav a high goal availability mismatch
 		//distance from goal = goal - proportion of current shifts covered for the month

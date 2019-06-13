@@ -77,7 +77,7 @@ public class Shift implements Comparable<Shift>	{
 //System.out.println("Unassigning person: " + getPerson().getLastName() + " from shift: " + toString());
 				getPerson().unassignShift(this);
 			}
-System.out.println("assigning person: " + person.getLastName() + " to shift: " + this);
+//System.out.println("assigning person: " + person.getLastName() + " to shift: " + this);
 			this.assigned = person;
 			person.assignShift(this);
 		}

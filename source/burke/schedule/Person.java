@@ -37,6 +37,10 @@ public class Person	implements  Comparable<Person> {
 			throw new RuntimeException("Invalid Person Description for " + lastName); 
 	}
 	
+	public String printAvailability()	{
+		return this.availability.toString();
+	}
+	
 	public boolean isWeekdayAMStaffer()	{
 		return weekdayTelestroke;
 	}
@@ -97,7 +101,7 @@ public class Person	implements  Comparable<Person> {
 		int totalWeight = 0;
 		for (Shift shift : allShifts)
 			totalWeight += shift.getWeight();
-		return getTarget() - getTotalAssignedWeight() / totalWeight;
+		return getTarget() - getTotalAssignedWeight(allShifts) / totalWeight;
 	}
 	
 	public void assignShift(Shift shift)	{
@@ -190,7 +194,7 @@ public class Person	implements  Comparable<Person> {
 	}
 	
 	public double getPriority(Shift[] allShifts)	{
-		double howFarBehindGoal = getTarget() - getTotalAssignedWeight()/totalAssignedWeightSoFar(allShifts);
+		double howFarBehindGoal = getTarget() - getTotalAssignedWeight(allShifts)/totalAssignedWeightSoFar(allShifts);
 		double targetAvailabilityGap = getTarget() - getRemainaingAvailableWeight(allShifts)/totalUnassignedWeightSoFar(allShifts);
 		
 		double filledShifts = 0;
@@ -229,9 +233,9 @@ public class Person	implements  Comparable<Person> {
 		return total;
 	}
 	
-	public double getTotalAssignedWeight()	{
+	public double getTotalAssignedWeight(Shift[] shifts)	{
 		double assignedWeight = 0.0;
-		for (Shift shift : assignedShifts)	{
+		for (Shift shift : shifts)	{
 			if (shift.getAssigned() != null)
 				if (shift.getAssigned().equals(this))	
 					assignedWeight += shift.getWeight();
@@ -245,7 +249,7 @@ public class Person	implements  Comparable<Person> {
 		
 		double percentUnfilled = (double) unfilled / (unfilled + filled);
 		double percentFilled = (double) filled / (unfilled + filled);
-		return getTotalAssignedWeight() * percentFilled + getRemainingWeight() * percentUnfilled;
+		return getTotalAssignedWeight(Schedule.getMasterSchedule().getAllShifts()) * percentFilled + getRemainingWeight() * percentUnfilled;
 	}
 	
 	public int getFellowPriority()	{

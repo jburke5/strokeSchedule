@@ -130,11 +130,11 @@ public class PersonDirectory	{
 	
 	public static void printPeople()	{
 		for (Person newPerson : allPeople)
-			System.out.println("adding person: " + newPerson.getLastName() + " invincible: " + newPerson.isInvincible() + " fellow: " + newPerson.isFellow() + " staffed: " + newPerson.isStaffedFellow() + " target: " + newPerson.getTarget());
+			System.out.println("adding person: " + newPerson.getLastName() + " invincible: " + newPerson.isInvincible() + " fellow: " + newPerson.isFellow() + " staffed: " + newPerson.isStaffedFellow() + " target: " + newPerson.getTarget() );
 
 	}
 	
-	public static int printWeights()	{
+	public static int printWeights(Schedule schedule)	{
 		System.out.println("\n\n###Final Weights###\n\n");
 		int totalShiftCount = 0;
 		int totalWeight = 0;
@@ -147,9 +147,9 @@ public class PersonDirectory	{
 				int priorShifts = shiftsForName.get(person.getLastName()) == null ? 0 : shiftsForName.get(person.getLastName());
 				
 				totalShiftCount += person.getShiftCount();
-				totalWeight += person.getTotalAssignedWeight();
+				totalWeight += person.getTotalAssignedWeight(schedule.getAllShifts());
 				
-				weightsForName.put(person.getLastName(), priorWeight + person.getTotalAssignedWeight());
+				weightsForName.put(person.getLastName(), priorWeight + person.getTotalAssignedWeight(schedule.getAllShifts()));
 				shiftsForName.put(person.getLastName(), priorShifts + person.getShiftCount());
 			}
 		}
