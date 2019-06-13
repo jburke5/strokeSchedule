@@ -48,7 +48,7 @@ public class ConvertToIcal	{
 			AMPM ampm = ampmRaw.equals("AM") ? AMPM.AM : AMPM.PM;
 			String name = args[1];
 			Shift shift = new Shift(date,  -1, ampm, false, -1);
-			shift.assigned = new Person(null, name, false, false, false, false, 0, 0,0);
+			shift.assigned = new Person(null, name, false, false, false, false, 0, 0,0, false);
 			allShifts.add(shift);
 			line = reader.readLine();
 		}

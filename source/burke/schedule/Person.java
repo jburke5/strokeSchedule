@@ -19,8 +19,9 @@ public class Person	implements  Comparable<Person> {
 	private int fellowPriority;
 	private double target;
 	private TelestrokePreference telestrokePreference;
+	private boolean weekdayTelestroke;
 	
-	public Person(String firstName, String lastName, boolean invincible, boolean staticOverride, boolean fellow, boolean staffed, int fellowPriority, double target, int telestrokePreference)	{
+	public Person(String firstName, String lastName, boolean invincible, boolean staticOverride, boolean fellow, boolean staffed, int fellowPriority, double target, int telestrokePreference, boolean weekdayPreference)	{
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.fellow = fellow;
@@ -31,8 +32,13 @@ public class Person	implements  Comparable<Person> {
 		this.fellowPriority = fellowPriority;
 		this.target = target;
 		this.telestrokePreference = TelestrokePreference.get(telestrokePreference);
+		this.weekdayTelestroke = weekdayPreference;
 		if (this.staffed & !this.fellow)
 			throw new RuntimeException("Invalid Person Description for " + lastName); 
+	}
+	
+	public boolean isWeekdayAMStaffer()	{
+		return weekdayTelestroke;
 	}
 	
 	public boolean isFellow()	{
@@ -84,7 +90,14 @@ public class Person	implements  Comparable<Person> {
 	}
 	
 	public String toString()	{
-		return firstName + " " + lastName + ": \n" + availability.toString() + "\n";
+		return firstName + " " + lastName ;
+	}
+	
+	public double getDistanceFromTarget(Shift[] allShifts)	{
+		int totalWeight = 0;
+		for (Shift shift : allShifts)
+			totalWeight += shift.getWeight();
+		return getTarget() - getTotalAssignedWeight() / totalWeight;
 	}
 	
 	public void assignShift(Shift shift)	{
@@ -153,7 +166,20 @@ public class Person	implements  Comparable<Person> {
 				totalNonZeroTarget += person.target;
 				totalNonZeroCount++;
 			}
-		return (1.0 - totalNonZeroTarget) / (people.size() - totalNonZeroCount);
+		
+		return (1.0 - totalNonZeroTarget) / (numPeopleEligibleForCall() - totalNonZeroCount);
+	}
+	
+	private int numPeopleEligibleForCall()	{
+		int count = 0;
+		for (Person person : PersonDirectory.getNonInvinciblePeople())
+			if (person.hasAnyAvailability())
+				count++;
+		return count;
+	}
+	
+	private boolean hasAnyAvailability()	{
+		return this.availability.getAllAvailableShifts().size() > 0;
 	}
 	
 	public double getTarget()	{

@@ -79,7 +79,13 @@ System.out.println(this);
 			applyUnstaffedFellowGaps();				//then have the unstaffed fellow fill in any gaps
 			applyUnstaffedFellowPreferences();		//give the unstaffed fellow their preference shifts
 		}
-		Arrays.sort(allShifts);
+/*		Swap swap = findASwap(PersonDirectory.getNonInvinciblePeople());
+		while (swap != null)	{
+System.out.println("**Swap: " + swap.toString());
+			swap.executeSwap();
+			swap = findASwap(PersonDirectory.getNonInvinciblePeople());
+		}
+*/		Arrays.sort(allShifts);
 	}
 	
 	private void copyShiftsFromMasterSchedule()	{
@@ -88,7 +94,7 @@ System.out.println(this);
 			if (masterShift.getPerson() != null  && masterShift.getPerson().getTelestrokePreference().equals(TelestrokePreference.WITH))	{
 				Shift newShift = getShift(masterShift.getDate(), masterShift.getAMPM());
 				Person newPerson = PersonDirectory.getPerson(masterShift.getPerson().getFirstName(), masterShift.getPerson().getLastName());
-				if (newPerson.isAvailableForShift(newShift))
+				if (newPerson.isAvailableForShift(newShift) )
 					newShift.assignPerson(newPerson);
 			}
 		}
@@ -109,9 +115,7 @@ System.out.println(this);
 		ArrayList<Shift> shiftsToAssign = new ArrayList<Shift>(Arrays.asList(allShifts));
 		Collections.shuffle(shiftsToAssign);
 		
-		
-		//redtag: need to check that fellows are available before signing shifts...left off here.
-		
+				
 		for (Shift shift : shiftsToAssign)	{
 			if (shift.hasStaffedFellowAssigned())
 				continue;
@@ -156,12 +160,12 @@ System.out.println(this);
 		List<Person> fellows = PersonDirectory.getUnstaffedFellows();
 		for (Person fellow : fellows)	{		
 			//first give them all their preferred shifts if they didn't hit their cap doing mandatories
-	System.out.println("Starting preferred");
+			//System.out.println("Starting preferred");
 			for (int i = 0; i <  allShifts.length; i++)	{
 				if (fellow.isPreferredForShift(allShifts[i]) )
 					allShifts[i].assignPersonIfNotCapped(fellow);
 			}
-	System.out.println("Ending preferred");
+			//System.out.println("Ending preferred");
 		
 			//then give them available shifts until they hit their caps...which will assign weekday ams
 			for (int i = 0; i <  allShifts.length; i++)	{
@@ -190,109 +194,116 @@ System.out.println(this);
 				}	
 		}
 	}
-	
-	private void applyRemainingShifts()	{
-		//sort the shifts by the amount of availability...fill shifts from teh least available to the most available
-		Arrays.sort(allShifts, new ShiftAvailabilityComparator());
-		for (int i = 0 ; i < allShifts.length; i++)	
-			if (allShifts[i].isUnfilled())
-				fillShift(allShifts[i]);
 		
-		//then assign possibles...
-		for (int i = 0; i <  allShifts.length; i++)	
-			if (allShifts[i].isUnfilled())
-				fillShift(allShifts[i], true);
+	private void applyRemainingShifts()	{
+		//we're going to batch this into weekday ams vs. all other shifts.
+		ArrayList<Shift> weekdayAMShifts = getWeekdayAMShifts();
+		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getWeekdayAMStaffers());
+		//if nobody in the weekday am list can cover it...try anybody...
+		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getNonFellows());
 
+		assignGroupOfShifts(getNonWeekdayAMShifts(), PersonDirectory.getNonFellows());
+	}
+	
+	private ArrayList<Shift> getWeekdayAMShifts()	{
+		Shift[] shifts = getAllShifts();
+		ArrayList<Shift> weekdayAMs = new ArrayList<Shift>();
+		for (Shift shift : shifts)	
+			if (shift.isWeekdayDayShift())
+				weekdayAMs.add(shift);
+		return weekdayAMs;	
+	}
+	
+	private ArrayList<Shift> getNonWeekdayAMShifts()	{
+		ArrayList<Shift> allOtherShifts = new ArrayList<Shift>(Arrays.asList(getAllShifts()));
+		allOtherShifts.removeAll(getWeekdayAMShifts());
+		return allOtherShifts;
+	}
+	
+	//apply a group of shifts across a group of people...
+	private void assignGroupOfShifts(ArrayList<Shift> shifts, ArrayList<Person> peopleForComparison)	{
+System.out.println("peopelForComparison: " + peopleForComparison.toString());
 		//so priority for receiving shift = distance from goal for month + goal/availability mismatch
 		//award shifts to people that are a high distance from their goal OR who hav a high goal availability mismatch
 		//distance from goal = goal - proportion of current shifts covered for the month
 		//goal/availability mismatch = goal - prportion of shifts that we hvaent' gotten to yet that your'e available for.
+
+		//sort the shifts by the amount of availability...fill shifts from teh least available to the most available
 		
+		Collections.sort(shifts, new ShiftAvailabilityComparator(peopleForComparison));
+		for (Shift shift : shifts)	
+			if (shift.isUnfilled())
+				fillShift(shift, shifts, peopleForComparison);
 		
-		System.out.println("*******		Before Equalization");
-		PersonDirectory.printWeights();		
+		//then assign possibles...
+		for (Shift shift : shifts)	
+			if (shift.isUnfilled())
+				fillShift(shift, shifts, peopleForComparison, true);
+		
+		//System.out.println("*******		Before Equalization");
+		//PersonDirectory.printWeights();			
 	}
+
 	
-	private class ShiftAvailabilityComparator implements Comparator<Shift>	{
+	private class ShiftAvailabilityComparator  implements Comparator<Shift>	{
+		private ArrayList<Person> peopleForComparison;
+		
+		public ShiftAvailabilityComparator(ArrayList<Person> peopleForComparison) {
+			this.peopleForComparison = peopleForComparison;
+		}
+	
 		public int compare(Shift a, Shift b) {
-			int availableA = countAvailablePeople( PersonDirectory.getNonFellows(), a);
-			int availableB = countAvailablePeople(PersonDirectory.getNonFellows(), b);
+			int availableA = countAvailablePeople( peopleForComparison, a);
+			int availableB = countAvailablePeople(peopleForComparison, b);
 			return availableA < availableB ? -1 : availableA == availableB ? 0 : 1;
     	}
 	}
+
 	
-	private Swap lookForASwap(ArrayList<Person> people)	{
-		return lookForASwap(people, false);
-	}
-	
-	private Swap lookForASwap(ArrayList<Person> people, boolean possibleOK)	{
-		for (int tradeFromCount = people.size()-1; tradeFromCount >= 1; tradeFromCount--)	{	//count down from the person with the highest weight 
-			for (int tradeToCount = 0; tradeToCount < tradeFromCount; tradeToCount++)	{		//count up from the person with teh lowest weight
-				Person tradeFrom = people.get(tradeFromCount);
-				Person tradeTo = people.get(tradeToCount);
-				
-				List<Shift> tradeFromShifts = tradeFrom.getMyShifts();
-				for (Shift possibleTradeShift : tradeFromShifts)	
-					if (possibleOK)	
-						if (tradeTo.isAvailableForShift(possibleTradeShift) || tradeTo.isPossibleForShift(possibleTradeShift))	
-							return new Swap(possibleTradeShift, tradeFrom, tradeTo);
-											
-					 else	
-						if (tradeTo.isAvailableForShift(possibleTradeShift))	
-							return new Swap(possibleTradeShift, tradeFrom, tradeTo);		
+	private Swap findASwap(ArrayList<Person> people)	{
+		ArrayList<Person> sortedPeople = new ArrayList<Person>(people);
+		Shift[] nonWeekdayAMShifts = (Shift[]) getNonWeekdayAMShifts().toArray(new Shift[getNonWeekdayAMShifts().size()]);
+		Collections.sort(sortedPeople, new TargetComparator(nonWeekdayAMShifts));
+		
+		ArrayList<Person> reversedSortedPeople = new ArrayList<Person>(sortedPeople);
+		Collections.reverse(reversedSortedPeople);
+		for (Person tradeFrom : reversedSortedPeople)	{	//count down from the person with the highest priority
+			for (Person tradeTo : sortedPeople)	{		//count up from the person with teh lowest weight
+				//System.out.println("Try to trade from: " + tradeFrom.toString() + " gap: " + tradeFrom.getDistanceFromTarget(allShifts));
+				//System.out.println("Try to trade to: " + tradeTo.toString() + " gap: " + tradeTo.getDistanceFromTarget(allShifts));
+				if (tradeTo.equals(tradeFrom))
+					break;
+				//for shifts where we're tradign beteween a person more than 15% over goal ane somebody under goal...look through shifts and see if you can swap any...
+				if ((tradeFrom.getDistanceFromTarget(allShifts) < tradeFrom.getTarget()*-0.15 ) && (tradeTo.getDistanceFromTarget(allShifts) > 0))	{
+					//System.out.println("in if...");
+					List<Shift> tradeFromShifts = tradeFrom.getMyShifts();
+					for (Shift possibleTradeShift : tradeFromShifts)	{
+							//System.out.println(possibleTradeShift.toString());
+							if (tradeTo.isAvailableForShift(possibleTradeShift))	{
+								//System.out.println("trade to is available...");
+								return new Swap(possibleTradeShift, tradeFrom, tradeTo);
+							}
+					}
+				}
 			}
 		}
 		return null;
 	}
-	
-	private double meanSDShifts()	{
-		ArrayList<Person> people = 	PersonDirectory.getAllPeople();
-		double total = 0.0;
-		for (Person person : people)	
-			total += person.getShiftCount();
-		
-		double mean = total / people.size();
-		double totalSD = 0.0;
-		for (Person person : people)	{
-			double sd = Math.sqrt(Math.pow((person.getShiftCount() - mean),2));
-			totalSD += sd;
-		}
-		
-		return totalSD / people.size();
-		
-	}
-	
-	private double meanSDWeights()	{
-		ArrayList<Person> people = 	PersonDirectory.getAllPeople();
-		double total = 0.0;
-		for (Person person : people)	
-			total += person.getAverageWeight();
-		
-		double mean = total / people.size();
-		double totalSD = 0.0;
-		for (Person person : people)	{
-			double sd = Math.sqrt(Math.pow((person.getAverageWeight() - mean),2));
-			totalSD += sd;
-		}
-		
-		return totalSD / people.size();
 
+	
+	private void fillShift(Shift shift, ArrayList<Shift> shiftGroup, ArrayList<Person> peopleForComparison)	{
+		fillShift(shift, shiftGroup, peopleForComparison, false);	//default to just using available shfits
 	}
 	
-	private void fillShift(Shift shift)	{
-		fillShift(shift, false);	//default to just using available shfits
-	}
-	
-	private void fillShift(Shift shift, boolean possibleOK)	{
-System.out.println("##########		trying to fill shift: " + shift);
+	private void fillShift(Shift shift, ArrayList<Shift> shiftGroup, ArrayList<Person> peopleForComparison, boolean possibleOK)	{
+//System.out.println("##########		trying to fill shift: " + shift);
 
 //for (Person person : PersonDirectory.getNonInvinciblePeople())
 	//System.out.println(person.getLastName() + " target: " + person.getTarget() + " priority: " + person.getPriority(allShifts) + " far behind: " + (person.getTarget() - person.getTotalAssignedWeight()  / person.totalAssignedWeightSoFar(allShifts)) + " gap: " + (person.getTarget() -  person.getRemainaingAvailableWeight(allShifts)/person.totalUnassignedWeightSoFar(allShifts)));
 		
-		ArrayList<Person> people = PersonDirectory.getNonInvinciblePeople();
-		Collections.sort(people, new PersonPriorityComparator());	//put the people with the lowest weight first...					
+		Collections.sort(peopleForComparison, new PersonPriorityComparator((Shift[]) shiftGroup.toArray(new Shift[shiftGroup.size()])));	//put the people with the lowest weight first...					
 		
-		for (Person person : people)	{
+		for (Person person : peopleForComparison)	{
 //System.out.println(person.getLastName() + ": " + person.getPriority(allShifts));
 			if (possibleOK)	{
 				if (person.isPossibleForShift(shift) || person.isAvailableForShift(shift))	{
@@ -309,9 +320,28 @@ System.out.println("##########		trying to fill shift: " + shift);
 	}
 
 	private class PersonPriorityComparator implements Comparator<Person>	{
+		private Shift[] shiftsForComparison;
+
+		
+		public PersonPriorityComparator(Shift[] shifts)	{
+			this.shiftsForComparison = shifts;
+		}
+	
 		//notSureTag: may need to reverse the sort order on this...i think this will get us high priority to low prioity
 		public int compare(Person a, Person b) {	
-			return a.getPriority(allShifts) < b.getPriority(allShifts) ? 1 : a.getPriority(allShifts) == b.getPriority(allShifts) ? 0 : -1;
+			return a.getPriority(shiftsForComparison) < b.getPriority(shiftsForComparison) ? 1 : a.getPriority(shiftsForComparison) == b.getPriority(shiftsForComparison) ? 0 : -1;
+    	}
+	}
+
+	private class TargetComparator implements Comparator<Person>	{
+		private Shift[] shiftsForTargetComparison;
+		
+		public TargetComparator(Shift[] shiftsForTarget)	{
+			this.shiftsForTargetComparison= shiftsForTarget;
+		}
+	
+		public int compare(Person a, Person b) {	
+			return a.getDistanceFromTarget(shiftsForTargetComparison) < b.getDistanceFromTarget(shiftsForTargetComparison) ? 1 : a.getDistanceFromTarget(shiftsForTargetComparison) == b.getDistanceFromTarget(shiftsForTargetComparison) ? 0 : -1;
     	}
 	}
 	
@@ -322,8 +352,6 @@ System.out.println("##########		trying to fill shift: " + shift);
 				getShift(shift).assignPerson(person);	//overwrite the static shifts with invincibles...
 			}
 		}
-	
-//System.out.println(this.toString());
 	}
 
 	protected Shift getShift(Shift shift)	{

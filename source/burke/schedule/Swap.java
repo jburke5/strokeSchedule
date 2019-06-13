@@ -19,4 +19,8 @@ public class Swap	{
 		shift.assignPerson(from);
 	}
 	
+	public String toString()	{
+		return "From: " + from.toString() + " to: " + to.toString() + " shift: " + shift.toString();
+	}
+	
 }

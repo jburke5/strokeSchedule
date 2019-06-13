@@ -6,8 +6,6 @@ public class PersonDirectory	{
 	private static List<Person> allPeople = new ArrayList<Person>();
 		
 	public static Person addPerson(Person newPerson)	{
-System.out.println("adding person: " + newPerson.getLastName() + " invincible: " + newPerson.isInvincible() + " fellow: " + newPerson.isFellow() + " staffed: " + newPerson.isStaffedFellow());
-
 		allPeople.add(newPerson);
 		return newPerson;
 	}
@@ -91,6 +89,15 @@ System.out.println("adding person: " + newPerson.getLastName() + " invincible: "
 		});
 		return fellows;
 	}
+	
+	public static ArrayList<Person> getWeekdayAMStaffers()	{
+		ArrayList<Person> weekdayAMStaffers = new ArrayList<Person>();
+		for (Person person : getAllPeople())
+			if (person.isWeekdayAMStaffer())
+				weekdayAMStaffers.add(person);
+		return weekdayAMStaffers;		
+
+	}
 		
 	public static void printDirectory()	{
 		for (Person next : allPeople)	{
@@ -119,6 +126,12 @@ System.out.println("adding person: " + newPerson.getLastName() + " invincible: "
 			nextShift = shift;
 		}
 		return duplicateShiftCount;
+	}
+	
+	public static void printPeople()	{
+		for (Person newPerson : allPeople)
+			System.out.println("adding person: " + newPerson.getLastName() + " invincible: " + newPerson.isInvincible() + " fellow: " + newPerson.isFellow() + " staffed: " + newPerson.isStaffedFellow() + " target: " + newPerson.getTarget());
+
 	}
 	
 	public static int printWeights()	{

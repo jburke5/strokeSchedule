@@ -35,6 +35,7 @@ public class ScheduleReader	{
 		String staffedLine = reader.readLine();
 		String targetLine = reader.readLine(); 	//the target percentage to aim for
 		String tsLine = reader.readLine(); 	//the target percentage to aim for
+		String weekdayLine = reader.readLine(); 	
 		//String fellowPriorityLine = reader.readLine();
 		
 		String[] firstNames = firstNameLine.split(",");
@@ -45,6 +46,7 @@ public class ScheduleReader	{
 		String[] staffedFields = staffedLine.split(",");
 		String[] targets = targetLine.split(",");
 		String[] telestrokePreferences = tsLine.split(",");
+		String[] weekdayPreferences = weekdayLine.split(",");
 		//String[] fellowPriorityFields = fellowPriorityLine.split(",");
 		
 		//skip the first two columns - those are the title  + holiday columns
@@ -56,7 +58,8 @@ public class ScheduleReader	{
 			int fellowPriority = new Integer(staffedFields[i]);
 			double target = new Double(targets[i]);
 			int telestrokePreference = new Integer(telestrokePreferences[i]);
-			Person newPerson = PersonDirectory.addPerson(new Person(firstNames[i], lastNames[i], invincible, staticOverride, fellow, staffed, fellowPriority, target, telestrokePreference));
+			boolean weekdayTelestroke = weekdayPreferences[i].equals("1") ? true : false;
+			Person newPerson = PersonDirectory.addPerson(new Person(firstNames[i], lastNames[i], invincible, staticOverride, fellow, staffed, fellowPriority, target, telestrokePreference, weekdayTelestroke));
 			peopleForIndices.put(i, newPerson);
 		}
 	}

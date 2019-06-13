@@ -14,8 +14,9 @@ public class Main	{
 		reader.load(year, month);
 		//dump the list of all shifts...
 		ArrayList<Person> people = PersonDirectory.getNonInvinciblePeople();
-		for (Person person : people)	
-			System.out.println(person.toString() + " \n" + person.getAllAvailableShifts());
+		PersonDirectory.printPeople();
+		//for (Person person : people)	
+		//	System.out.println(person.toString() + " \n" + person.getAllAvailableShifts());
 
 		schedule.applyShifts();
 		int duplicates = PersonDirectory.checkForDuplicateShifts();
