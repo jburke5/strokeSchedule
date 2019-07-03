@@ -196,8 +196,12 @@ public class Person	implements  Comparable<Person> {
 	public double getPriority(Shift[] allShifts)	{
 		double howFarBehindGoal = getTarget() - getTotalAssignedWeight(allShifts)/totalAssignedWeightSoFar(allShifts);
 		double targetAvailabilityGap = getTarget() - getRemainaingAvailableWeight(allShifts)/totalUnassignedWeightSoFar(allShifts);
-		
-		double filledShifts = 0;
+/*System.out.println("get prioroity...target: " + getTarget()); 
+System.out.println("get prioroity...total assigned: " + getTotalAssignedWeight(allShifts)); 
+System.out.println("get prioroity...total assigned so far: " + totalAssignedWeightSoFar(allShifts)); 
+System.out.println("get prioroity...remainging available weight: " + getRemainaingAvailableWeight(allShifts)); 
+System.out.println("get prioroity...total unassinged: " + totalUnassignedWeightSoFar(allShifts)); 
+*/		double filledShifts = 0;
 		double unfilledShifts = 0;
 		for (int i = 0; i < allShifts.length; i++)	{
 			if (allShifts[i].isUnfilled())
@@ -205,6 +209,8 @@ public class Person	implements  Comparable<Person> {
 			else
 				filledShifts++;
 		}
+//System.out.println("get prioroity...unfilled shifts: " + unfilledShifts); 
+//System.out.println("get prioroity...filled shifts: " + filledShifts); 
 		
 		return 	howFarBehindGoal*(filledShifts/(filledShifts+unfilledShifts)) + targetAvailabilityGap *(unfilledShifts/(unfilledShifts + filledShifts));
 	}

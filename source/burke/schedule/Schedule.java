@@ -69,8 +69,8 @@ public class Schedule extends GregorianCalendar	{
 		if (PersonDirectory.getStaffedFellows().size() > 0)	{
 			applyStaffedFellowPreferences();		//give the staffed fellow their preference shifts
 		}
-System.out.println("$$$$$$$$$		Print Schedule");
-System.out.println(this);
+//System.out.println("$$$$$$$$$		Print Schedule");
+//System.out.println(this);
 		
 		applyInvincibleShifts();		//first take the invincibles	
 		applyRemainingShifts();			//then fill in the schedule for everybody else
@@ -198,11 +198,11 @@ System.out.println("**Swap: " + swap.toString());
 	private void applyRemainingShifts()	{
 		//we're going to batch this into weekday ams vs. all other shifts.
 		ArrayList<Shift> weekdayAMShifts = getWeekdayAMShifts();
-		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getWeekdayAMStaffers());
+		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getWeekdayAMStaffers(), true);
 		//if nobody in the weekday am list can cover it...try anybody...
-		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getNonFellows());
+		assignGroupOfShifts(weekdayAMShifts, PersonDirectory.getNonFellows(), false);
 
-		assignGroupOfShifts(getNonWeekdayAMShifts(), PersonDirectory.getNonFellows());
+		assignGroupOfShifts(getNonWeekdayAMShifts(), PersonDirectory.getNonFellows(), false);
 	}
 	
 	private ArrayList<Shift> getWeekdayAMShifts()	{
@@ -221,7 +221,7 @@ System.out.println("**Swap: " + swap.toString());
 	}
 	
 	//apply a group of shifts across a group of people...
-	private void assignGroupOfShifts(ArrayList<Shift> shifts, ArrayList<Person> peopleForComparison)	{
+	private void assignGroupOfShifts(ArrayList<Shift> shifts, ArrayList<Person> peopleForComparison, boolean maintainPriorityWithinGroup)	{
 		//so priority for receiving shift = distance from goal for month + goal/availability mismatch
 		//award shifts to people that are a high distance from their goal OR who hav a high goal availability mismatch
 		//distance from goal = goal - proportion of current shifts covered for the month
@@ -230,14 +230,15 @@ System.out.println("**Swap: " + swap.toString());
 		//sort the shifts by the amount of availability...fill shifts from teh least available to the most available
 		
 		Collections.sort(shifts, new ShiftAvailabilityComparator(peopleForComparison));
-		for (Shift shift : shifts)	
+		for (Shift shift : shifts)	{
 			if (shift.isUnfilled())
-				fillShift(shift, shifts, peopleForComparison);
+				fillShift(shift, shifts, peopleForComparison, false, maintainPriorityWithinGroup);
+		}
 		
 		//then assign possibles...
 		for (Shift shift : shifts)	
 			if (shift.isUnfilled())
-				fillShift(shift, shifts, peopleForComparison, true);
+				fillShift(shift, shifts, peopleForComparison, true, maintainPriorityWithinGroup);
 		
 		//System.out.println("*******		Before Equalization");
 		//PersonDirectory.printWeights();			
@@ -289,21 +290,23 @@ System.out.println("**Swap: " + swap.toString());
 		return null;
 	}
 
+
 	
-	private void fillShift(Shift shift, ArrayList<Shift> shiftGroup, ArrayList<Person> peopleForComparison)	{
-		fillShift(shift, shiftGroup, peopleForComparison, false);	//default to just using available shfits
-	}
-	
-	private void fillShift(Shift shift, ArrayList<Shift> shiftGroup, ArrayList<Person> peopleForComparison, boolean possibleOK)	{
+	private void fillShift(Shift shift, ArrayList<Shift> shiftGroup, ArrayList<Person> peopleForComparison, boolean possibleOK, boolean maintainPriorityWithinGroup)	{
 //System.out.println("##########		trying to fill shift: " + shift);
 
 //for (Person person : PersonDirectory.getNonInvinciblePeople())
 	//System.out.println(person.getLastName() + " target: " + person.getTarget() + " priority: " + person.getPriority(allShifts) + " far behind: " + (person.getTarget() - person.getTotalAssignedWeight()  / person.totalAssignedWeightSoFar(allShifts)) + " gap: " + (person.getTarget() -  person.getRemainaingAvailableWeight(allShifts)/person.totalUnassignedWeightSoFar(allShifts)));
 		
-		Collections.sort(peopleForComparison, new PersonPriorityComparator((Shift[]) shiftGroup.toArray(new Shift[shiftGroup.size()])));	//put the people with the lowest weight first...					
+		Shift[] shiftsForPriority = maintainPriorityWithinGroup ? (Shift[]) shiftGroup.toArray(new Shift[shiftGroup.size()]) : allShifts;
 		
+		Collections.sort(peopleForComparison, new PersonPriorityComparator(shiftsForPriority));	//put the people with the lowest weight first...					
+		
+//System.out.println("checking shift: " + shift);
+//for (Person person : peopleForComparison)
+	//System.out.println(person.toString() + " priority: " + person.getPriority(shiftsForPriority));
+
 		for (Person person : peopleForComparison)	{
-//System.out.println(person.getLastName() + ": " + person.getPriority(allShifts));
 			if (possibleOK)	{
 				if (person.isPossibleForShift(shift) || person.isAvailableForShift(shift))	{
 					shift.assignPerson(person);	
@@ -311,6 +314,7 @@ System.out.println("**Swap: " + swap.toString());
 				}	
 			} else	{
 				if (person.isAvailableForShift(shift) )	{
+//System.out.println("assigning person to shift: " + person.getLastName() + ": " + person.getPriority(allShifts));
 					shift.assignPerson(person);
 					break;
 				}

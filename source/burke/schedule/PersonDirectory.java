@@ -134,6 +134,7 @@ public class PersonDirectory	{
 
 	}
 	
+	
 	public static int printWeights(Schedule schedule)	{
 		System.out.println("\n\n###Final Weights###\n\n");
 		int totalShiftCount = 0;
