@@ -3,7 +3,7 @@ package burke.schedule;
 import java.util.*;
 
 public class Main	{
-	private String shiftDirectory = "/Users/burke/Documents/stroke schedules/automated";
+	private String shiftDirectory = ".";
 
 	public Main()	{}
 
@@ -48,6 +48,7 @@ public class Main	{
 		try	{
 			int year = Integer.valueOf(args[0]);
 			int month = Integer.valueOf(args[1]) - 1;		//calendar has zero indexed months...which is crazytime...
+			
 			new Main().buildSchedule(year, month);
 		} catch(Exception ex)	{
 			ex.printStackTrace();
