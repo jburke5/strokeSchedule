@@ -1,2 +1,2 @@
-java -cp scheduler.jar  burke.schedule.Main 2021 5
+java -cp scheduler.jar  burke.schedule.Main 2022 3
 

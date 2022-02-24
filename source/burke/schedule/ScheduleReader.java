@@ -15,6 +15,7 @@ public class ScheduleReader	{
 	
 	public void load(int year, int month, String scheduleNameSuffix) throws Exception	{
 		String filePath = path + File.separator +  new DateFormatSymbols().getMonths()[month] + Integer.toString(year) + scheduleNameSuffix +  ".csv";
+		System.out.println("file path: " + filePath);
 		BufferedReader reader = new BufferedReader(new FileReader(filePath));
 		loadPeople(reader);
 		//reader.readLine(); 	//burn the blank line
@@ -36,6 +37,8 @@ public class ScheduleReader	{
 		String targetLine = reader.readLine(); 	//the target percentage to aim for
 		String tsLine = reader.readLine(); 	//the target percentage to aim for
 		String weekdayLine = reader.readLine(); 	
+		String invincibleTsWeekdayLine = reader.readLine();
+		//System.out.println(invincibleTsWeekdayLine);
 		//String fellowPriorityLine = reader.readLine();
 		
 		String[] firstNames = firstNameLine.split(",");
@@ -47,9 +50,14 @@ public class ScheduleReader	{
 		String[] targets = targetLine.split(",");
 		String[] telestrokePreferences = tsLine.split(",");
 		String[] weekdayPreferences = weekdayLine.split(",");
+		String[] weekdayInvincibleTs = invincibleTsWeekdayLine.split(",");
 		//String[] fellowPriorityFields = fellowPriorityLine.split(",");
 		
 		//skip the first two columns - those are the title  + holiday columns
+		System.out.println(firstNameLine);
+		System.out.println(Arrays.asList(firstNames));
+		System.out.println(invincibleLine);
+		System.out.println(Arrays.asList(invincibles));
 		for (int i = 2; i < firstNames.length; i++)	{
 			boolean invincible = invincibles[i].equals("1") ? true : false;
 			boolean staticOverride = staticOverrides[i].equals("1") ? true : false;
@@ -59,7 +67,9 @@ public class ScheduleReader	{
 			double target = new Double(targets[i]);
 			int telestrokePreference = new Integer(telestrokePreferences[i]);
 			boolean weekdayTelestroke = weekdayPreferences[i].equals("1") ? true : false;
-			Person newPerson = PersonDirectory.addPerson(new Person(firstNames[i], lastNames[i], invincible, staticOverride, fellow, staffed, fellowPriority, target, telestrokePreference, weekdayTelestroke));
+			
+			boolean invicibleTsWeekday = weekdayInvincibleTs[i].equals("1") ? true : false;
+			Person newPerson = PersonDirectory.addPerson(new Person(firstNames[i], lastNames[i], invincible, staticOverride, fellow, staffed, fellowPriority, target, telestrokePreference, weekdayTelestroke, invicibleTsWeekday));
 			peopleForIndices.put(i, newPerson);
 		}
 	}
@@ -85,9 +95,12 @@ public class ScheduleReader	{
 	private void loadAvailability(BufferedReader reader, int year, int month ) throws Exception	{
 		String nextLine = reader.readLine();
 		while (nextLine != null)	{
+			System.out.println("Next line before trim: " + nextLine);
 			String[] lineElems = nextLine.trim().split(",");
-			for (int i = 2; i < lineElems.length; i++)	
+			System.out.println("Next line: " + nextLine);
+			for (int i = 2; i < lineElems.length; i++)	{
 				lookupPerson(i).setAvailablility(parseAvailability(lineElems, i), parseDate(lineElems), parseAMPM(lineElems));
+			}
 			nextLine = reader.readLine();
 		}
 	}

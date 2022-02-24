@@ -20,8 +20,9 @@ public class Person	implements  Comparable<Person> {
 	private double target;
 	private TelestrokePreference telestrokePreference;
 	private boolean weekdayTelestroke;
+	private boolean weekdayAmInvincible;
 	
-	public Person(String firstName, String lastName, boolean invincible, boolean staticOverride, boolean fellow, boolean staffed, int fellowPriority, double target, int telestrokePreference, boolean weekdayPreference)	{
+	public Person(String firstName, String lastName, boolean invincible, boolean staticOverride, boolean fellow, boolean staffed, int fellowPriority, double target, int telestrokePreference, boolean weekdayPreference, boolean weekdayAmInvincible)	{
 		this.firstName = firstName;
 		this.lastName = lastName;
 		this.fellow = fellow;
@@ -33,6 +34,7 @@ public class Person	implements  Comparable<Person> {
 		this.target = target;
 		this.telestrokePreference = TelestrokePreference.get(telestrokePreference);
 		this.weekdayTelestroke = weekdayPreference;
+		this.weekdayAmInvincible = weekdayAmInvincible;
 		if (this.staffed & !this.fellow)
 			throw new RuntimeException("Invalid Person Description for " + lastName); 
 	}
@@ -43,6 +45,10 @@ public class Person	implements  Comparable<Person> {
 	
 	public boolean isWeekdayAMStaffer()	{
 		return weekdayTelestroke;
+	}
+	
+	public boolean isWeedayAMInvincible()	{
+		return weekdayAmInvincible;
 	}
 	
 	public boolean isFellow()	{

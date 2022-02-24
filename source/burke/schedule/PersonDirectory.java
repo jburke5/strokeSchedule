@@ -47,6 +47,15 @@ public class PersonDirectory	{
 		return invincibles;
 	} 
 	
+	public static List<Person> getInvincibleWeekdayPeople()	{
+		List<Person> invincibles = new ArrayList<Person>();
+		for (Person person : allPeople)	{
+			if (person.isWeedayAMInvincible())	
+				invincibles.add(person);
+		} 
+		return invincibles;
+	} 
+	
 	public static ArrayList<Person> getAllPeople()	{
 		ArrayList<Person> all = new ArrayList<Person>(allPeople);
 		return all;

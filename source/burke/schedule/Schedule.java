@@ -15,12 +15,15 @@ public class Schedule extends GregorianCalendar	{
 	public static Schedule MasterSchedule = null;
 	
 	private boolean master;
+	private boolean telestroke;
 	
 
 	public Schedule (int year, int month, boolean master)	{
 		super(year, month, 1);
 		this.YEAR = year;
 		this.MONTH = month;
+		// bit of a hack here...
+		this.telestroke = !master;
 		initShifts();
 		set(DAY_OF_MONTH, 1);	//reset to one after initializing shifts
 
@@ -355,6 +358,13 @@ System.out.println("**Swap: " + swap.toString());
 				getShift(shift).assignPerson(person);	//overwrite the static shifts with invincibles...
 			}
 		}
+		
+		List<Person> invinciblesWeekdayTS = PersonDirectory.getInvincibleWeekdayPeople();
+		for (Person person : invinciblesWeekdayTS)	
+			for (Shift shift : person.getAllAvailableShifts())	
+				if (shift.isWeekdayDayShift())
+					getShift(shift).assignPerson(person);	//overwrite the static shifts with invincibles...
+				
 	}
 
 	protected Shift getShift(Shift shift)	{
